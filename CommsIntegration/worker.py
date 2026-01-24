@@ -1,4 +1,4 @@
-# Communicates with parent, and populates the 
+# Consumes Redis queue and broadcasts to edge devices
 
 import json
 
@@ -28,26 +28,9 @@ red = redis.Redis(connection_pool=pool)
 # Setup MQTT
 mqtt_handle = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, protocol=mqtt.MQTTv5)
 
-
 # Clears the queue in case of faliure
 def clr_queue():
     red.rename("commands", "faliure_stack")
-
-
-# Resolve the commands recieved from parent
-def resolve_cmd(data) -> str:
-    return "pass"
-
-
-# Start subscriptions
-def on_connect(client, userdata, flags, reason_code, properties):
-    print(f"Connected with result code {reason_code}")
-    client.subscribe("SYS/")
-    for i in ERROR_CHANNELS:
-        client.subscribe(i)
-    for i in SENSE_CHANNELS:
-        client.subscribe(i)
-
 
 def on_message(client, userdata, msg):
     if msg.topic in ERROR_CHANNELS:
@@ -57,14 +40,3 @@ def on_message(client, userdata, msg):
         print("An Error occured on channel esp1!")
         print("On-Board feedback:")
         print(data)
-    if msg.topic == "SYS/CMD":
-        data = json.loads(msg.payload)
-        red.rpush("commands", resolve_cmd(data))
-
-
-def main():
-    print("Hello from commsintegration!")
-
-
-if __name__ == "__main__":
-    main()

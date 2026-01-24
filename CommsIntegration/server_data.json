@@ -1,0 +1,17 @@
+{
+    "mqtt_server": "alpha1640",
+    "mqtt_port": "1883",
+    "red_server": "localhost",
+    "red_port": "6379",
+    "channels": [
+        "esp32/hands/cmd",
+        "esp32/hands/error",
+        "esp32/legs/cmd",
+        "esp32/legs/error",
+        "esp32/sense"
+    ],
+    "command_channels": ["esp32/hands/cmd", "esp32/legs/cmd"],
+    "error_channels": ["esp32/hands/error", "esp32/legs/error"],
+    "sense_channels": ["esp32/sense"],
+    "parent_channel": "SYS/CMD"
+}
