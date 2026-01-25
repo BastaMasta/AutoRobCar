@@ -1,6 +1,7 @@
 # Consumes Redis queue and broadcasts to edge devices
 
 import json
+import time
 
 import paho.mqtt.client as mqtt
 import redis
@@ -28,15 +29,14 @@ red = redis.Redis(connection_pool=pool)
 # Setup MQTT
 mqtt_handle = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, protocol=mqtt.MQTTv5)
 
-# Clears the queue in case of faliure
-def clr_queue():
-    red.rename("commands", "faliure_stack")
 
 def on_message(client, userdata, msg):
     if msg.topic in ERROR_CHANNELS:
         data = json.loads(msg.payload)
         if data["status"] == "ERROR":
-            clr_queue()
-        print("An Error occured on channel esp1!")
-        print("On-Board feedback:")
-        print(data)
+            print("An Error occured on channel esp1!")
+            print("sleeping for 2 seconds to let system recover")
+            time.sleep(2)
+
+while True:
+    

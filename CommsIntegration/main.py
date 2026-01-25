@@ -1,6 +1,8 @@
-# Communicates with parent, and populates the 
+# Communicates with parent, and populates the
 
+import datetime
 import json
+import time
 
 import paho.mqtt.client as mqtt
 import redis
@@ -54,9 +56,15 @@ def on_message(client, userdata, msg):
         data = json.loads(msg.payload)
         if data["status"] == "ERROR":
             clr_queue()
-        print("An Error occured on channel esp1!")
-        print("On-Board feedback:")
-        print(data)
+            print("An Error occured on channel esp1!")
+            print("On-Board feedback:")
+            print(data)
+            time.sleep(1)
+            print("Sending incomplete progress feedback to parent process...")
+            red.rpush("faliure_stack", str(msg))
+            client.publish("SYS/ERR", red.lrange("faliure_stack", 0, -1), qos=1)
+            red.rename("faliure_stack", f"error_{datetime.datetime.now()}")
+
     if msg.topic == "SYS/CMD":
         data = json.loads(msg.payload)
         red.rpush("commands", resolve_cmd(data))
