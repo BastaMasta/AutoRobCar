@@ -1,12 +1,10 @@
 # Communicates with parent, and populates the
 
-import asyncio
-import datetime
+import datetime as dt
 import json
 import logging
 import os
 import time
-from datetime import datetime
 
 import paho.mqtt.client as mqtt
 import redis
@@ -98,7 +96,7 @@ def on_message(client, userdata, msg):
             print("Sending incomplete progress feedback to parent process...")
             red.rpush("faliure_stack", str(msg))
             mqtt_handle.publish("SYS/ERR", red.lrange("faliure_stack", 0, -1), qos=1)
-            red.rename("faliure_stack", f"error_{datetime.now()}")
+            red.rename("faliure_stack", f"error_{dt.datetime.now()}")
 
     if msg.topic == "SYS/CMD":
         data = json.loads(msg.payload)
@@ -118,7 +116,5 @@ def main():
     sentry_sdk.profiler.stop_profiler()
 
 
-
 if __name__ == "__main__":
     main()
-
