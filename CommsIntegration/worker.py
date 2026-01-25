@@ -39,4 +39,4 @@ def on_message(client, userdata, msg):
             time.sleep(2)
 
 while True:
-    
+    pass
