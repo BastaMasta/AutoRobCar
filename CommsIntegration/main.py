@@ -1,11 +1,12 @@
 # Communicates with parent, and populates the
 
+import asyncio
 import datetime
 import json
 import logging
 import os
 import time
-from tkinter.constants import TRUE
+from datetime import datetime
 
 import paho.mqtt.client as mqtt
 import redis
@@ -53,7 +54,11 @@ pool = redis.ConnectionPool(host=REDIS_SERVER, port=REDIS_PORT, decode_responses
 red = redis.Redis(connection_pool=pool)
 
 # Setup MQTT
-mqtt_handle = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, protocol=mqtt.MQTTv5)
+mqtt_handle = mqtt.Client(
+    "DataPusher",
+    callbackapiversion=mqtt.CallbackAPIVersion.VERSION2,
+    protocol=mqtt.MQTTv5,
+)
 
 
 # Clears the queue in case of faliure
@@ -63,10 +68,9 @@ def clr_queue():
 
 # Resolve the commands recieved from parent
 def resolve_cmd(data) -> str:
-    
     # put command topic into a key-value pair called "topic"
     # and actual command into another key-value pair called "body"
-    
+
     return json.dumps("pass")
 
 
@@ -93,8 +97,8 @@ def on_message(client, userdata, msg):
             time.sleep(1)
             print("Sending incomplete progress feedback to parent process...")
             red.rpush("faliure_stack", str(msg))
-            mqtt_handle.publish("SYS/ERR", await red.lrange("faliure_stack", 0, -1), qos=1)
-            red.rename("faliure_stack", f"error_{datetime.datetime.now()}")
+            mqtt_handle.publish("SYS/ERR", red.lrange("faliure_stack", 0, -1), qos=1)
+            red.rename("faliure_stack", f"error_{datetime.now()}")
 
     if msg.topic == "SYS/CMD":
         data = json.loads(msg.payload)
@@ -103,8 +107,10 @@ def on_message(client, userdata, msg):
 
 def main():
     print("Hello from commsintegration!")
+    mqtt_handler.loop_start()
     while True:
-        
+        pass
+    mqtt_handler.loop_stop()
 
 
 sentry_sdk.profiler.start_profiler()
