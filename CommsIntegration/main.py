@@ -55,8 +55,8 @@ red = redis.Redis(connection_pool=pool)
 
 # Setup MQTT
 mqtt_handle = mqtt.Client(
-    "DataPusher",
-    callbackapiversion=mqtt.CallbackAPIVersion.VERSION2,
+    client_id="DataPusher",
+    callback_api_version=mqtt.CallbackAPIVersion.VERSION2,
     protocol=mqtt.MQTTv5,
 )
 
@@ -107,13 +107,18 @@ def on_message(client, userdata, msg):
 
 def main():
     print("Hello from commsintegration!")
-    mqtt_handler.loop_start()
+    sentry_sdk.profiler.start_profiler()
+    mqtt_handle.on_connect = on_connect
+    mqtt_handle.on_message = on_message
+    mqtt_handle.connect(MQTT_SERVER, MQTT_PORT)
+    mqtt_handle.loop_start()
     while True:
         pass
-    mqtt_handler.loop_stop()
+    mqtt_handle.loop_stop()
+    sentry_sdk.profiler.stop_profiler()
 
 
-sentry_sdk.profiler.start_profiler()
+
 if __name__ == "__main__":
     main()
-sentry_sdk.profiler.stop_profiler()
+
