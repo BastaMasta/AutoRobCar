@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import time
+from tkinter.constants import TRUE
 
 import paho.mqtt.client as mqtt
 import redis
@@ -31,7 +32,7 @@ sentry_sdk.init(
 
 logger = logging.getLogger(__name__)
 
-# Defining constants and channels
+# Defining constants and topics
 jdata = json.load(open("server_data.json", "r", encoding="utf-8"))
 
 MQTT_SERVER = jdata["mqtt_server"]
@@ -39,11 +40,11 @@ MQTT_PORT = jdata["mqtt_port"]
 REDIS_SERVER = jdata["red_server"]
 REDIS_PORT = jdata["red_port"]
 
-CMD_CHANNELS = jdata["command_channels"]
-ERROR_CHANNELS = jdata["error_channels"]
-SENSE_CHANNELS = jdata["sense_channels"]
+CMD_TOPICS = jdata["command_topics"]
+ERROR_TOPICS = jdata["error_topics"]
+SENSE_TOPICS = jdata["sense_topics"]
 
-PARENT_CHANNEL = jdata["parent_channel"]
+PARENT_TOPIC = jdata["parent_topic"]
 
 del jdata
 
@@ -62,33 +63,37 @@ def clr_queue():
 
 # Resolve the commands recieved from parent
 def resolve_cmd(data) -> str:
-    return "pass"
+    
+    # put command topic into a key-value pair called "topic"
+    # and actual command into another key-value pair called "body"
+    
+    return json.dumps("pass")
 
 
 # Start subscriptions
 def on_connect(client, userdata, flags, reason_code, properties):
     print(f"Connected with result code {reason_code}")
     client.subscribe("SYS/")
-    for i in ERROR_CHANNELS:
+    for i in ERROR_TOPICS:
         client.subscribe(i)
-    for i in SENSE_CHANNELS:
+    for i in SENSE_TOPICS:
         client.subscribe(i)
 
 
 def on_message(client, userdata, msg):
-    if msg.topic in ERROR_CHANNELS:
+    if msg.topic in ERROR_TOPICS:
         data = json.loads(msg.payload)
         if data["status"] == "ERROR":
             clr_queue()
-            print("An Error occured on channel esp1!")
+            print("An Error occured on topic esp1!")
             print("On-Board feedback:")
             print(data)
-            logger.error("An Error occured on channel esp1!")
+            logger.error("An Error occured on topic esp1!")
             logger.error(f"On-Board feedback:\n{msg}")
             time.sleep(1)
             print("Sending incomplete progress feedback to parent process...")
             red.rpush("faliure_stack", str(msg))
-            client.publish("SYS/ERR", red.lrange("faliure_stack", 0, -1), qos=1)
+            mqtt_handle.publish("SYS/ERR", await red.lrange("faliure_stack", 0, -1), qos=1)
             red.rename("faliure_stack", f"error_{datetime.datetime.now()}")
 
     if msg.topic == "SYS/CMD":
@@ -98,6 +103,8 @@ def on_message(client, userdata, msg):
 
 def main():
     print("Hello from commsintegration!")
+    while True:
+        
 
 
 sentry_sdk.profiler.start_profiler()
