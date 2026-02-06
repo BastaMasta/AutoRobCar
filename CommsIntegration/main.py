@@ -4,30 +4,32 @@ import datetime as dt
 import json
 import logging
 import os
+import threading
 import time
 
 import paho.mqtt.client as mqtt
 import redis
-import sentry_sdk
+
+# import sentry_sdk
 from dotenv import load_dotenv
 
 load_dotenv()
 
 # Set up sentry for loggin and profiling
-sentry_sdk.init(
-    dsn=os.getenv("SENTRY_URL"),
-    # Add data like request headers and IP for users,
-    # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
-    send_default_pii=True,
-    # Enable sending logs to Sentry
-    enable_logs=True,
-    # Set traces_sample_rate to 1.0 to capture 100%
-    # of transactions for tracing.
-    traces_sample_rate=1.0,
-    # Set profile_session_sample_rate to 1.0 to profile 100%
-    # of profile sessions.
-    profile_session_sample_rate=1.0,
-)
+# sentry_sdk.init(
+#     dsn=os.getenv("SENTRY_URL"),
+#     # Add data like request headers and IP for users,
+#     # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
+#     send_default_pii=True,
+#     # Enable sending logs to Sentry
+#     enable_logs=True,
+#     # Set traces_sample_rate to 1.0 to capture 100%
+#     # of transactions for tracing.
+#     traces_sample_rate=1.0,
+#     # Set profile_session_sample_rate to 1.0 to profile 100%
+#     # of profile sessions.
+#     profile_session_sample_rate=1.0,
+# )
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +59,9 @@ mqtt_handle = mqtt.Client(
     callback_api_version=mqtt.CallbackAPIVersion.VERSION2,
     protocol=mqtt.MQTTv5,
 )
+
+global max_retries
+max_retries = 10
 
 
 # Clears the queue in case of faliure
@@ -103,17 +108,86 @@ def on_message(client, userdata, msg):
         red.rpush("commands", resolve_cmd(data))
 
 
+def process_queue():
+    while True:
+        comm = red.brpoplpush("commands", "processing", timeout=3)
+
+        if comm is None:
+            continue
+
+        command = json.loads(comm)
+        try:
+            logger.info("broadcasting message to subordinate ESP machine...")
+            mqtt_handle.publish(command["topic"], command["body"])
+        except Exception as e:
+            logger.error(
+                f"FATAL! an error occured while broadcasting command!\nError: {e}\ntrying to re-publish after a short time-out"
+            )
+            time.sleep(1)
+            err_cnt = 1
+            while err_cnt <= max_retries:
+                try:
+                    logger.info("broadcasting message to subordinate ESP machine...")
+                    mqtt_handle.publish(command["topic"], command["body"])
+                    logger.info("Successfully published after retry!")
+                    break
+
+                except Exception as e_retry:
+                    err_cnt += 1
+                    if err_cnt > max_retries:
+                        logger.critical(
+                            f"Failed after {max_retries} retries. Moving to dead letter queue. Error: {e_retry}"
+                        )
+                        clr_queue()
+                        print(
+                            "Sending incomplete progress feedback to parent process..."
+                        )
+
+                        red.rpush("faliure_stack", str(comm))
+
+                        failure_report = {
+                            "status": "SEQUENCE_FAILED",
+                            "failed_command": command,
+                            "error": str(e_retry),
+                            "timestamp": str(dt.datetime.now()),
+                        }
+
+                        mqtt_handle.publish(
+                            "SYS/ERR",
+                            json.dumps(json.dumps(failure_report)),
+                            qos=1,
+                        )
+                        red.rename("faliure_stack", f"error_{dt.datetime.now()}")
+
+                        break
+
+                    logger.error(
+                        f"EVEN FATALER! Failed to publish even after retry! retrying after short sleep. faliure count: {err_cnt} \n Error: {e_retry}"
+                    )
+                    time.sleep(0.5 * err_cnt)
+
+
 def main():
     print("Hello from commsintegration!")
-    sentry_sdk.profiler.start_profiler()
+    # sentry_sdk.profiler.start_profiler()
+
+    # Starting MQTT thread
     mqtt_handle.on_connect = on_connect
     mqtt_handle.on_message = on_message
     mqtt_handle.connect(MQTT_SERVER, MQTT_PORT)
     mqtt_handle.loop_start()
-    while True:
-        pass
-    mqtt_handle.loop_stop()
-    sentry_sdk.profiler.stop_profiler()
+
+    # Starting processing thread
+    queue_thread = threading.Thread(target=process_queue, daemon=True)
+    queue_thread.start()
+
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        print("Shutting down process....")
+        mqtt_handle.loop_stop()
+    # sentry_sdk.profiler.stop_profiler()
 
 
 if __name__ == "__main__":

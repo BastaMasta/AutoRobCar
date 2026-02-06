@@ -48,27 +48,7 @@ def on_disconnect(client, userdata, rc):
    global flag_connected
    flag_connected = 0
 
-def process_queue():
-    while True:
-        comm = red.rpoplpush("commands", "processing")
 
-        if comm is None:
-            break
-
-        command = json.loads(comm)
-        try:
-            logger.info("broadcasting message to subordinate ESP machine...")
-            mqtt_handle.publish(command["topic"], command["body"])
-        except Exception as e:
-            logger.error(f"FATAL! an error occured while broadcasting command!\nError: {e}\ntrying to re-connect and publish after a short time-out")
-            time.sleep(0.01)
-            try:
-                if not flag_connected:
-                    mqtt_handle.connect(MQTT_SERVER, MQTT_PORT)
-                logger.info("broadcasting message to subordinate ESP machine...")
-                mqtt_handle.publish(command["topic"], command["body"])
-            except Exception as _:
-                break
 
 
 while True:
