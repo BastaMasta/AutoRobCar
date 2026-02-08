@@ -60,6 +60,8 @@ mqtt_handle = mqtt.Client(
     protocol=mqtt.MQTTv5,
 )
 
+mqtt_handle.username_pw_set(os.getenv("MQTT_USER"), os.getenv("MQTT_PASS"))
+
 global max_retries
 max_retries = 10
 
