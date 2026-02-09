@@ -3,15 +3,15 @@
     "mqtt_port": "1883",
     "red_server": "localhost",
     "red_port": "6379",
-    "channels": [
+    "topics": [
         "esp32/hands/cmd",
         "esp32/hands/error",
         "esp32/legs/cmd",
         "esp32/legs/error",
         "esp32/sense"
     ],
-    "command_channels": ["esp32/hands/cmd", "esp32/legs/cmd"],
-    "error_channels": ["esp32/hands/error", "esp32/legs/error"],
-    "sense_channels": ["esp32/sense"],
-    "parent_channel": "SYS/CMD"
+    "command_topics": ["esp32/hands/cmd", "esp32/legs/cmd"],
+    "error_topics": ["esp32/hands/error", "esp32/legs/error"],
+    "sense_topics": ["esp32/sense"],
+    "parent_topic": "SYS/CMD"
 }

@@ -9,9 +9,9 @@ import time
 
 import paho.mqtt.client as mqtt
 import redis
+from dotenv import load_dotenv
 
 # import sentry_sdk
-from dotenv import load_dotenv
 
 load_dotenv()
 
