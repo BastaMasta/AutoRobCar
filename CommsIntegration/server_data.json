@@ -1,5 +1,5 @@
 {
-    "mqtt_server": "alpha1640",
+    "mqtt_server": "localhost",
     "mqtt_port": "1883",
     "red_server": "localhost",
     "red_port": "6379",
