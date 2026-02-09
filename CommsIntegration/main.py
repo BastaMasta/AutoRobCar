@@ -76,7 +76,7 @@ def resolve_cmd(data) -> str:
     # put command topic into a key-value pair called "topic"
     # and actual command into another key-value pair called "body"
 
-    return json.dumps("pass")
+    return json.dumps("data")
 
 
 # Start subscriptions
