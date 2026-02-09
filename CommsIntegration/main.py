@@ -176,7 +176,7 @@ def main():
     # Starting MQTT thread
     mqtt_handle.on_connect = on_connect
     mqtt_handle.on_message = on_message
-    mqtt_handle.connect(str(MQTT_SERVER), str(MQTT_PORT))
+    mqtt_handle.connect(str(MQTT_SERVER), int(MQTT_PORT))
     mqtt_handle.loop_start()
 
     # Starting processing thread
